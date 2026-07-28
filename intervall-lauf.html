@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Intervall · Lauf-Tracker</title>
+<meta name="theme-color" content="#0E1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Intervall">
+<style>
+:root{
+  --bg:#0E1116; --surface:#171C23; --surface2:#1F2630; --line:#2A3340;
+  --ink:#E8ECF1; --muted:#8B95A3;
+  --work:#FF6B2C; --rest:#35C4B5; --frame:#9AA5FF; --danger:#FF4D5E;
+  --radius:14px;
+  font-size:16px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  overscroll-behavior:none;}
+body{min-height:100dvh; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+.screen{display:none; max-width:520px; margin:0 auto; padding:16px 16px 40px;}
+.screen.active{display:block;}
+h1{font-size:1.35rem; letter-spacing:.02em; margin:8px 0 2px;}
+.sub{color:var(--muted); font-size:.85rem; margin:0 0 18px;}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:14px;}
+.card h2{font-size:.8rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin:0 0 10px; display:flex; align-items:center; gap:8px;}
+.dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+.dot.work{background:var(--work);} .dot.rest{background:var(--rest);} .dot.frame{background:var(--frame);}
+.row{display:flex; gap:10px; align-items:center;}
+.row + .row{margin-top:10px;}
+label.small{font-size:.72rem; color:var(--muted); display:block; margin-bottom:4px;}
+input[type=text], input[type=number]{
+  width:100%; background:var(--surface2); border:1px solid var(--line); color:var(--ink);
+  border-radius:10px; padding:12px; font-size:1rem; min-height:48px;}
+input:focus{outline:2px solid var(--frame); outline-offset:1px; border-color:transparent;}
+.toggle{display:flex; background:var(--surface2); border:1px solid var(--line); border-radius:10px; overflow:hidden; flex-shrink:0;}
+.toggle button{background:none; border:none; color:var(--muted); padding:12px 14px; font-size:.85rem; min-height:48px; cursor:pointer;}
+.toggle button.on{background:var(--frame); color:#0B0E1A; font-weight:600;}
+.stepper{display:flex; align-items:center; gap:0; background:var(--surface2); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+.stepper button{width:52px; min-height:52px; background:none; border:none; color:var(--ink); font-size:1.5rem; cursor:pointer;}
+.stepper .val{min-width:64px; text-align:center; font-size:1.3rem; font-weight:700;}
+.switchrow{display:flex; justify-content:space-between; align-items:center;}
+.switch{position:relative; width:52px; height:32px; flex-shrink:0;}
+.switch input{opacity:0; width:100%; height:100%; position:absolute; margin:0; cursor:pointer;}
+.switch .tr{position:absolute; inset:0; background:var(--surface2); border:1px solid var(--line); border-radius:16px; transition:background .15s; pointer-events:none;}
+.switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:var(--muted); transition:transform .15s, background .15s;}
+.switch input:checked + .tr{background:var(--frame); border-color:var(--frame);}
+.switch input:checked + .tr::after{transform:translateX(20px); background:#0B0E1A;}
+.phase-item{background:var(--surface2); border:1px solid var(--line); border-radius:10px; padding:10px; margin-top:10px;}
+.phase-item .row{gap:8px;}
+.btn{display:block; width:100%; border:none; border-radius:var(--radius); font-size:1.1rem; font-weight:700;
+  min-height:64px; cursor:pointer; color:#0B0E1A;}
+.btn.start{background:var(--work); font-size:1.25rem; letter-spacing:.03em;}
+.btn.ghost{background:none; border:1px dashed var(--line); color:var(--muted); min-height:48px; font-size:.9rem; font-weight:500;}
+.btn.small-danger{background:none; border:none; color:var(--danger); min-height:40px; font-size:.85rem; width:auto; padding:0 8px; font-weight:500;}
+.btn:active{transform:scale(.985);}
+/* ---------- Run screen ---------- */
+#screen-run{display:none; text-align:center; padding-top:8px;}
+#screen-run.active{display:flex; flex-direction:column; min-height:96dvh;}
+.gpsbar{display:flex; justify-content:space-between; align-items:center; font-size:.75rem; color:var(--muted); padding:4px 2px 10px;}
+.gpspill{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:99px; padding:4px 10px;}
+.gpspill .dot{width:8px;height:8px;}
+.ring-wrap{position:relative; width:min(78vw,300px); margin:4px auto 6px;}
+.ring-wrap svg{width:100%; height:auto; transform:rotate(-90deg);}
+.ring-bg{stroke:var(--surface2);} 
+.ring-fg{stroke:var(--work); transition:stroke-dashoffset .3s linear, stroke .3s;}
+.ring-center{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:2px;}
+#phaseName{font-size:1.05rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;}
+#phaseCount{font-size:.75rem; color:var(--muted);}
+#phaseRemain{font-size:2.6rem; font-weight:700; line-height:1.05;}
+#phaseRemainUnit{font-size:.75rem; color:var(--muted);}
+.pacebox{margin:6px 0 2px;}
+.pacebox .lbl{font-size:.7rem; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);}
+#livePace{font-size:3.4rem; font-weight:800; line-height:1.05;}
+#livePace small{font-size:1rem; font-weight:500; color:var(--muted);}
+.totals{display:flex; justify-content:center; gap:26px; margin:10px 0 6px; color:var(--muted); font-size:.8rem;}
+.totals b{display:block; color:var(--ink); font-size:1.25rem; font-weight:700;}
+.runbtns{margin-top:auto; display:flex; gap:12px; padding-bottom:10px;}
+.runbtns .btn{flex:1;}
+.btn.pause{background:var(--frame);}
+.btn.stop{background:var(--danger); color:#fff;}
+.nextphase{font-size:.8rem; color:var(--muted); min-height:1.2em;}
+/* ---------- Summary ---------- */
+table{width:100%; border-collapse:collapse; font-size:.9rem;}
+th{color:var(--muted); font-weight:500; font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; text-align:left; padding:6px 4px;}
+td{padding:8px 4px; border-top:1px solid var(--line);}
+td.num{text-align:right;}
+.sumgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;}
+.sumgrid .card{margin:0; text-align:center;}
+.sumgrid b{font-size:1.5rem; display:block;}
+.sumgrid span{font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em;}
+.hint{font-size:.78rem; color:var(--muted); line-height:1.5; margin-top:10px;}
+.err{background:#3A1A20; border:1px solid var(--danger); color:#FFB3BB; border-radius:10px; padding:10px 12px; font-size:.85rem; margin-bottom:12px; display:none;}
+</style>
+</head>
+<body>
+
+<!-- ================= SETUP ================= -->
+<div class="screen active" id="screen-setup">
+  <h1>Intervall-Lauf</h1>
+  <p class="sub">Training konfigurieren, Handy einstecken, loslaufen. Die Konfiguration wird automatisch gespeichert.</p>
+  <div class="err" id="setupErr"></div>
+
+  <div class="card">
+    <div class="switchrow">
+      <h2 style="margin:0"><span class="dot frame"></span>Warm-up</h2>
+      <span class="switch"><input type="checkbox" id="wuOn" checked><span class="tr"></span></span>
+    </div>
+    <div id="wuBody" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot work"></span>Intervalle</h2>
+    <div class="row">
+      <div style="flex:1">
+        <label class="small">Wiederholungen</label>
+        <div class="stepper">
+          <button type="button" id="repMinus">−</button>
+          <div class="val mono" id="repVal">8</div>
+          <button type="button" id="repPlus">+</button>
+        </div>
+      </div>
+    </div>
+    <div id="phaseList"></div>
+    <button type="button" class="btn ghost" id="addPhase" style="margin-top:10px">+ Phase hinzufügen</button>
+  </div>
+
+  <div class="card">
+    <div class="switchrow">
+      <h2 style="margin:0"><span class="dot frame"></span>Cool-down</h2>
+      <span class="switch"><input type="checkbox" id="cdOn" checked><span class="tr"></span></span>
+    </div>
+    <div id="cdBody" style="margin-top:10px"></div>
+  </div>
+
+  <button class="btn start" id="btnStart">Lauf starten</button>
+  <p class="hint">GPS-Berechtigung wird beim Start abgefragt. Display bleibt an (Wake&nbsp;Lock), Phasenwechsel werden per Ton + Vibration signalisiert.</p>
+</div>
+
+<!-- ================= RUN ================= -->
+<div class="screen" id="screen-run">
+  <div class="gpsbar">
+    <span class="gpspill"><span class="dot" id="gpsDot" style="background:var(--muted)"></span><span id="gpsTxt">GPS…</span></span>
+    <span class="mono" id="clock">00:00</span>
+  </div>
+
+  <div class="ring-wrap">
+    <svg viewBox="0 0 200 200">
+      <circle class="ring-bg" cx="100" cy="100" r="88" fill="none" stroke-width="10"/>
+      <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="88" fill="none" stroke-width="10"
+        stroke-linecap="round" stroke-dasharray="552.9" stroke-dashoffset="0"/>
+    </svg>
+    <div class="ring-center">
+      <div id="phaseCount">–</div>
+      <div id="phaseName">Bereit</div>
+      <div class="mono" id="phaseRemain">–</div>
+      <div id="phaseRemainUnit"></div>
+    </div>
+  </div>
+  <div class="nextphase" id="nextPhase"></div>
+
+  <div class="pacebox">
+    <div class="lbl">Momentan-Pace</div>
+    <div class="mono" id="livePace">–:–– <small>/km</small></div>
+  </div>
+
+  <div class="totals mono">
+    <div><b id="totDist">0,00</b>km</div>
+    <div><b id="totTime">00:00</b>Zeit</div>
+    <div><b id="totEle">0</b>Hm ↑</div>
+  </div>
+
+  <div class="runbtns">
+    <button class="btn pause" id="btnPause">Pause</button>
+    <button class="btn stop" id="btnStop">Beenden</button>
+  </div>
+</div>
+
+<!-- ================= SUMMARY ================= -->
+<div class="screen" id="screen-summary">
+  <h1>Zusammenfassung</h1>
+  <p class="sub" id="sumDate"></p>
+
+  <div class="sumgrid">
+    <div class="card"><b class="mono" id="sDist">–</b><span>Distanz</span></div>
+    <div class="card"><b class="mono" id="sTime">–</b><span>Zeit</span></div>
+    <div class="card"><b class="mono" id="sPace">–</b><span>Ø Pace</span></div>
+    <div class="card"><b class="mono" id="sEle">–</b><span>Höhenmeter</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Pace pro Phasentyp</h2>
+    <table id="tblGroups"><thead><tr><th>Phase</th><th class="num">Anzahl</th><th class="num">Distanz</th><th class="num">Ø Pace</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Alle Abschnitte</h2>
+    <table id="tblLaps"><thead><tr><th>#</th><th>Phase</th><th class="num">Zeit</th><th class="num">Distanz</th><th class="num">Pace</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <button class="btn start" id="btnGpx">GPX herunterladen</button>
+  <button class="btn ghost" id="btnAgain" style="margin-top:12px">Neuer Lauf</button>
+  <p class="hint">Die GPX-Datei enthält alle GPS-Rohpunkte (Zeit, Position, Höhe) plus Wegpunkte an jedem Phasenwechsel und lässt sich direkt in Strava hochladen (Upload → Datei).</p>
+</div>
+
+<script>
+"use strict";
+/* ================= Konfiguration & Editor ================= */
+const LS_KEY = "intervallLaufConfig.v1";
+const $ = id => document.getElementById(id);
+
+const defaultCfg = () => ({
+  warmup:   { on:true,  name:"Warm-up",   mode:"time", time:600, dist:1000 },
+  cooldown: { on:true,  name:"Cool-down", mode:"time", time:300, dist:500 },
+  reps: 8,
+  phases: [
+    { name:"Sprint", mode:"time", time:180, dist:400, kind:"work" },
+    { name:"Trab",   mode:"time", time:120, dist:200, kind:"rest" },
+  ],
+});
+
+let cfg = loadCfg();
+function loadCfg(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ const c = JSON.parse(raw); if(c && c.phases && c.phases.length) return c; }
+  }catch(e){}
+  return defaultCfg();
+}
+function saveCfg(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(cfg)); }catch(e){} }
+
+/* --- kleine UI-Bausteine --- */
+function phaseFields(p, {showName=true, showKind=false, onRemove=null} = {}){
+  const wrap = document.createElement("div");
+  wrap.className = "phase-item";
+  const r1 = document.createElement("div"); r1.className = "row";
+  if(showName){
+    const nameWrap = document.createElement("div"); nameWrap.style.flex = "1";
+    nameWrap.innerHTML = `<label class="small">Name</label>`;
+    const inp = document.createElement("input");
+    inp.type = "text"; inp.value = p.name; inp.maxLength = 24;
+    inp.addEventListener("input", () => { p.name = inp.value; saveCfg(); });
+    nameWrap.appendChild(inp); r1.appendChild(nameWrap);
+  }
+  if(showKind){
+    const kindWrap = document.createElement("div");
+    kindWrap.innerHTML = `<label class="small">Typ</label>`;
+    const tg = document.createElement("div"); tg.className = "toggle";
+    const bW = document.createElement("button"); bW.type="button"; bW.textContent = "Belastung";
+    const bR = document.createElement("button"); bR.type="button"; bR.textContent = "Erholung";
+    const paint = () => { bW.classList.toggle("on", p.kind==="work"); bR.classList.toggle("on", p.kind!=="work"); };
+    bW.onclick = () => { p.kind="work"; paint(); saveCfg(); };
+    bR.onclick = () => { p.kind="rest"; paint(); saveCfg(); };
+    paint(); tg.append(bW,bR); kindWrap.appendChild(tg); r1.appendChild(kindWrap);
+  }
+  wrap.appendChild(r1);
+
+  const r2 = document.createElement("div"); r2.className = "row";
+  const modeWrap = document.createElement("div");
+  modeWrap.innerHTML = `<label class="small">Modus</label>`;
+  const tg = document.createElement("div"); tg.className = "toggle";
+  const bT = document.createElement("button"); bT.type="button"; bT.textContent = "Zeit";
+  const bD = document.createElement("button"); bD.type="button"; bD.textContent = "Distanz";
+  modeWrap.appendChild(tg); tg.append(bT,bD);
+  const valWrap = document.createElement("div"); valWrap.style.flex = "1";
+  const valLbl = document.createElement("label"); valLbl.className = "small";
+  const valInp = document.createElement("input");
+  valInp.type = "number"; valInp.inputMode = "decimal"; valInp.min = "0"; valInp.step = "any";
+  valWrap.append(valLbl, valInp);
+  function paintMode(){
+    bT.classList.toggle("on", p.mode==="time"); bD.classList.toggle("on", p.mode==="dist");
+    if(p.mode==="time"){ valLbl.textContent = "Dauer (Minuten)"; valInp.value = +(p.time/60).toFixed(2).replace(/\.?0+$/,""); }
+    else { valLbl.textContent = "Distanz (Meter)"; valInp.value = p.dist; }
+  }
+  bT.onclick = () => { p.mode="time"; paintMode(); saveCfg(); };
+  bD.onclick = () => { p.mode="dist"; paintMode(); saveCfg(); };
+  valInp.addEventListener("input", () => {
+    const v = parseFloat(String(valInp.value).replace(",", "."));
+    if(!isFinite(v) || v <= 0) return;
+    if(p.mode==="time") p.time = Math.round(v*60); else p.dist = Math.round(v);
+    saveCfg();
+  });
+  paintMode();
+  r2.append(modeWrap, valWrap);
+  wrap.appendChild(r2);
+
+  if(onRemove){
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "btn small-danger"; del.textContent = "Phase entfernen";
+    del.onclick = onRemove;
+    wrap.appendChild(del);
+  }
+  return wrap;
+}
+
+function renderEditor(){
+  // Warm-up / Cool-down
+  for(const [key, bodyId, onId] of [["warmup","wuBody","wuOn"],["cooldown","cdBody","cdOn"]]){
+    const p = cfg[key], body = $(bodyId), chk = $(onId);
+    chk.checked = p.on !== false;
+    body.innerHTML = "";
+    body.appendChild(phaseFields(p, {showName:true}));
+    body.style.display = chk.checked ? "" : "none";
+    chk.onchange = () => { p.on = chk.checked; body.style.display = chk.checked ? "" : "none"; saveCfg(); };
+  }
+  // Wiederholungen
+  $("repVal").textContent = cfg.reps;
+  $("repMinus").onclick = () => { cfg.reps = Math.max(1, cfg.reps-1); $("repVal").textContent = cfg.reps; saveCfg(); };
+  $("repPlus").onclick  = () => { cfg.reps = Math.min(50, cfg.reps+1); $("repVal").textContent = cfg.reps; saveCfg(); };
+  // Phasenliste
+  const list = $("phaseList"); list.innerHTML = "";
+  cfg.phases.forEach((p, i) => {
+    list.appendChild(phaseFields(p, {
+      showName:true, showKind:true,
+      onRemove: cfg.phases.length > 1 ? () => { cfg.phases.splice(i,1); saveCfg(); renderEditor(); } : null
+    }));
+  });
+  $("addPhase").onclick = () => {
+    cfg.phases.push({ name:"Phase "+(cfg.phases.length+1), mode:"time", time:60, dist:200,
+      kind: cfg.phases.length % 2 ? "work" : "rest" });
+    saveCfg(); renderEditor();
+  };
+}
+renderEditor();
+
+/* Flache Phasen-Warteschlange für den Lauf */
+function buildQueue(){
+  const q = [];
+  const push = (p, kind, rep=null, repTotal=null) => q.push({
+    name: p.name || "Phase", kind, mode: p.mode,
+    target: p.mode==="time" ? p.time : p.dist, rep, repTotal,
+  });
+  if(cfg.warmup.on) push(cfg.warmup, "frame");
+  for(let r=1; r<=cfg.reps; r++)
+    for(const p of cfg.phases) push(p, p.kind==="work" ? "work" : "rest", r, cfg.reps);
+  if(cfg.cooldown.on) push(cfg.cooldown, "frame");
+  return q;
+}
+
+/* ================= Lauf-Engine ================= */
+const R = { // Laufzustand
+  active:false, paused:false, queue:[], idx:0,
+  phaseTime:0, phaseDist:0, total:0, totalDist:0, eleGain:0,
+  points:[], segStart:[], laps:[], startWall:null,
+  lastTick:null, lastFix:null, smoothEle:null, eleRef:null,
+  buf:[], watchId:null, wakeLock:null, timer:null, startedAt:null,
+};
+const CIRC = 2*Math.PI*88;
+
+/* --- Audio & Vibration --- */
+let AC = null;
+function beep(freq, dur=0.18, when=0, vol=0.5){
+  if(!AC) return;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = "sine"; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, AC.currentTime+when);
+  g.gain.exponentialRampToValueAtTime(vol, AC.currentTime+when+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+when+dur);
+  o.connect(g); g.connect(AC.destination);
+  o.start(AC.currentTime+when); o.stop(AC.currentTime+when+dur+0.05);
+}
+function signal(kind){
+  const vib = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+  if(kind==="work"){ beep(880,.15,0); beep(880,.15,.22); beep(1175,.25,.44); vib([200,80,200,80,400]); }
+  else if(kind==="rest"){ beep(523,.35,0); vib([500]); }
+  else if(kind==="frame"){ beep(660,.2,0); beep(660,.2,.3); vib([200,100,200]); }
+  else if(kind==="done"){ [880,988,1175,1319].forEach((f,i)=>beep(f,.22,i*.2)); vib([300,100,300,100,600]); }
+}
+
+/* --- Hilfsfunktionen --- */
+const toRad = d => d*Math.PI/180;
+function haversine(a,b){
+  const dLat = toRad(b.lat-a.lat), dLon = toRad(b.lon-a.lon);
+  const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLon/2)**2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+const fmtT = s => { s=Math.max(0,Math.round(s));
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60, p=n=>String(n).padStart(2,"0");
+  return h ? `${h}:${p(m)}:${p(ss)}` : `${p(m)}:${p(ss)}`; };
+const fmtPace = secPerKm => {
+  if(!isFinite(secPerKm) || secPerKm<=0 || secPerKm>3600) return "–:––";
+  const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
+  return s===60 ? `${m+1}:00` : `${m}:${String(s).padStart(2,"0")}`; };
+const fmtKm = m => (m/1000).toFixed(2).replace(".", ",");
+
+/* --- GPS --- */
+function onFix(pos){
+  const c = pos.coords, t = pos.timestamp;
+  const acc = c.accuracy ?? 999;
+  setGps(acc);
+  if(!R.active || R.paused) { R.lastFix = null; return; }
+  if(acc > 35) return;                       // ungenaue Fixes verwerfen
+  const p = { t, lat:c.latitude, lon:c.longitude,
+              ele:(c.altitude!=null && isFinite(c.altitude)) ? c.altitude : null };
+  if(R.lastFix){
+    const dt = (t - R.lastFix.t)/1000;
+    if(dt <= 0) return;
+    const d = haversine(R.lastFix, p);
+    if(d/dt > 12) return;                    // >12 m/s beim Laufen: Ausreißer
+    R.totalDist += d; R.phaseDist += d;
+    // Höhenmeter (geglättet)
+    if(p.ele != null){
+      R.smoothEle = R.smoothEle==null ? p.ele : R.smoothEle*0.8 + p.ele*0.2;
+      if(R.eleRef==null) R.eleRef = R.smoothEle;
+      const diff = R.smoothEle - R.eleRef;
+      if(diff >= 1.5){ R.eleGain += diff; R.eleRef = R.smoothEle; }
+      else if(diff <= -1.5){ R.eleRef = R.smoothEle; }
+    }
+  }
+  R.lastFix = p;
+  R.points.push({ ...p, phase: R.queue[R.idx] ? R.queue[R.idx].name : "Ende", seg: R.segStart.length-1 });
+  // Rolling-Window für Momentan-Pace
+  R.buf.push({ t, d: R.totalDist });
+  while(R.buf.length > 2 && t - R.buf[0].t > 10000) R.buf.shift();
+}
+function setGps(acc){
+  const dot = $("gpsDot"), txt = $("gpsTxt");
+  if(acc==null){ dot.style.background="var(--danger)"; txt.textContent="kein GPS"; return; }
+  if(acc<=12){ dot.style.background="var(--rest)"; txt.textContent=`GPS ±${Math.round(acc)} m`; }
+  else if(acc<=35){ dot.style.background="var(--work)"; txt.textContent=`GPS ±${Math.round(acc)} m`; }
+  else { dot.style.background="var(--danger)"; txt.textContent=`GPS schwach ±${Math.round(acc)} m`; }
+}
+
+/* --- Wake Lock --- */
+async function keepAwake(){
+  try{ R.wakeLock = await navigator.wakeLock.request("screen"); }catch(e){}
+}
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState==="visible" && R.active) keepAwake();
+});
+
+/* --- Start / Pause / Stop --- */
+$("btnStart").onclick = async () => {
+  const q = buildQueue();
+  if(!q.length){ showErr("Keine Phasen konfiguriert."); return; }
+  if(!("geolocation" in navigator)){ showErr("Dieses Gerät stellt keine Geolocation bereit."); return; }
+  AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+  if(AC.state === "suspended") await AC.resume();
+  Object.assign(R, { active:true, paused:false, queue:q, idx:0, phaseTime:0, phaseDist:0,
+    total:0, totalDist:0, eleGain:0, points:[], segStart:[Date.now()], laps:[],
+    startWall:new Date(), lastTick:performance.now(), lastFix:null, smoothEle:null, eleRef:null, buf:[] });
+  R.watchId = navigator.geolocation.watchPosition(onFix,
+    err => { setGps(null); if(err.code===1) showRunHint("GPS-Berechtigung verweigert – Distanz kann nicht gemessen werden."); },
+    { enableHighAccuracy:true, maximumAge:0, timeout:15000 });
+  keepAwake();
+  show("screen-run");
+  signal(q[0].kind);
+  R.timer = setInterval(tick, 250);
+  paintPhase();
+};
+function showErr(msg){ const e=$("setupErr"); e.textContent=msg; e.style.display="block"; }
+function showRunHint(msg){ $("nextPhase").textContent = msg; }
+
+$("btnPause").onclick = () => {
+  if(!R.active) return;
+  R.paused = !R.paused;
+  $("btnPause").textContent = R.paused ? "Weiter" : "Pause";
+  if(!R.paused){ R.lastTick = performance.now(); R.lastFix = null; R.buf = []; R.segStart.push(Date.now()); }
+};
+$("btnStop").onclick = () => {
+  if(!R.active) return;
+  if(!confirm("Lauf beenden?")) return;
+  finishRun(false);
+};
+
+function tick(){
+  const now = performance.now();
+  if(!R.paused){
+    const dt = (now - R.lastTick)/1000;
+    R.total += dt; R.phaseTime += dt;
+    const ph = R.queue[R.idx];
+    if(ph){
+      const done = ph.mode==="time" ? R.phaseTime >= ph.target : R.phaseDist >= ph.target;
+      if(done) nextPhase();
+    }
+  }
+  R.lastTick = now;
+  paintLive();
+}
+function nextPhase(){
+  const ph = R.queue[R.idx];
+  R.laps.push({ name:ph.name, kind:ph.kind, rep:ph.rep, time:R.phaseTime, dist:R.phaseDist });
+  R.idx++; R.phaseTime = 0; R.phaseDist = 0;
+  if(R.idx >= R.queue.length){ finishRun(true); return; }
+  signal(R.queue[R.idx].kind);
+  paintPhase();
+}
+function finishRun(complete){
+  const ph = R.queue[R.idx];
+  if(!complete && ph && (R.phaseTime > 2 || R.phaseDist > 5))
+    R.laps.push({ name:ph.name, kind:ph.kind, rep:ph.rep, time:R.phaseTime, dist:R.phaseDist });
+  R.active = false;
+  clearInterval(R.timer);
+  if(R.watchId != null) navigator.geolocation.clearWatch(R.watchId);
+  if(R.wakeLock){ try{ R.wakeLock.release(); }catch(e){} R.wakeLock = null; }
+  signal("done");
+  renderSummary();
+  show("screen-summary");
+}
+
+/* --- Live-Anzeige --- */
+const KINDCOL = { work:"var(--work)", rest:"var(--rest)", frame:"var(--frame)" };
+function paintPhase(){
+  const ph = R.queue[R.idx];
+  $("phaseName").textContent = ph.name;
+  $("phaseName").style.color = KINDCOL[ph.kind];
+  $("ringFg").style.stroke = KINDCOL[ph.kind];
+  $("phaseCount").textContent = ph.rep ? `Runde ${ph.rep} / ${ph.repTotal}` : "";
+  $("phaseRemainUnit").textContent = ph.mode==="time" ? "verbleibend" : "Meter verbleibend";
+  const nxt = R.queue[R.idx+1];
+  $("nextPhase").textContent = nxt ? `Danach: ${nxt.name}` : "Letzte Phase";
+}
+function paintLive(){
+  const ph = R.queue[R.idx];
+  if(ph){
+    const frac = ph.mode==="time" ? R.phaseTime/ph.target : Math.min(1, R.phaseDist/ph.target);
+    $("ringFg").style.strokeDashoffset = CIRC * (1 - Math.min(1, frac));
+    $("phaseRemain").textContent = ph.mode==="time"
+      ? fmtT(ph.target - R.phaseTime)
+      : String(Math.max(0, Math.round(ph.target - R.phaseDist)));
+  }
+  // Momentan-Pace: gleitendes Fenster (~5–10 s GPS-Punkte)
+  let paceTxt = "–:––";
+  if(R.buf.length >= 2){
+    const a = R.buf[0], b = R.buf[R.buf.length-1];
+    const dt = (b.t - a.t)/1000, dd = b.d - a.d;
+    if(dt >= 3 && dd > 1){
+      const v = dd/dt;                       // m/s
+      if(v >= 0.6) paceTxt = fmtPace(1000/v);
+    }
+  }
+  $("livePace").innerHTML = `${paceTxt} <small>/km</small>`;
+  $("totDist").textContent = fmtKm(R.totalDist);
+  $("totTime").textContent = fmtT(R.total);
+  $("totEle").textContent = Math.round(R.eleGain);
+  const d = new Date(); $("clock").textContent = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+
+/* ================= Zusammenfassung & GPX ================= */
+function renderSummary(){
+  $("sumDate").textContent = R.startWall
+    ? R.startWall.toLocaleString("de-DE", { dateStyle:"full", timeStyle:"short" }) + " Uhr" : "";
+  $("sDist").textContent = fmtKm(R.totalDist) + " km";
+  $("sTime").textContent = fmtT(R.total);
+  $("sPace").textContent = R.totalDist > 20 ? fmtPace(R.total/(R.totalDist/1000)) + " /km" : "–";
+  $("sEle").textContent = Math.round(R.eleGain) + " m";
+
+  // Gruppen nach Phasenname
+  const groups = new Map();
+  for(const l of R.laps){
+    const g = groups.get(l.name) || { n:0, time:0, dist:0, kind:l.kind };
+    g.n++; g.time += l.time; g.dist += l.dist; groups.set(l.name, g);
+  }
+  const gb = $("tblGroups").querySelector("tbody"); gb.innerHTML = "";
+  for(const [name, g] of groups){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><span class="dot ${g.kind}" style="margin-right:6px"></span>${esc(name)}</td>
+      <td class="num mono">${g.n}×</td>
+      <td class="num mono">${fmtKm(g.dist)} km</td>
+      <td class="num mono">${g.dist>20 ? fmtPace(g.time/(g.dist/1000)) : "–"}</td>`;
+    gb.appendChild(tr);
+  }
+  // Einzelrunden
+  const lb = $("tblLaps").querySelector("tbody"); lb.innerHTML = "";
+  R.laps.forEach((l,i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="mono">${i+1}</td>
+      <td>${esc(l.name)}${l.rep ? ` <span style="color:var(--muted)">(${l.rep})</span>` : ""}</td>
+      <td class="num mono">${fmtT(l.time)}</td>
+      <td class="num mono">${fmtKm(l.dist)} km</td>
+      <td class="num mono">${l.dist>20 ? fmtPace(l.time/(l.dist/1000)) : "–"}</td>`;
+    lb.appendChild(tr);
+  });
+}
+const esc = s => String(s).replace(/[<>&"']/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* --- GPX-Export --- */
+function buildGpx(){
+  const iso = t => new Date(t).toISOString();
+  let wpts = "", trksegs = "";
+  // Wegpunkte an Phasenwechseln
+  let lastPhase = null;
+  for(const p of R.points){
+    if(p.phase !== lastPhase){
+      wpts += `  <wpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">
+    <time>${iso(p.t)}</time><name>${esc(p.phase)}</name>
+  </wpt>\n`;
+      lastPhase = p.phase;
+    }
+  }
+  // Track-Segmente (Pausen erzeugen Segmentgrenzen)
+  const bySeg = new Map();
+  for(const p of R.points){
+    if(!bySeg.has(p.seg)) bySeg.set(p.seg, []);
+    bySeg.get(p.seg).push(p);
+  }
+  for(const pts of bySeg.values()){
+    if(!pts.length) continue;
+    trksegs += "    <trkseg>\n";
+    for(const p of pts){
+      trksegs += `      <trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">`;
+      if(p.ele != null) trksegs += `<ele>${p.ele.toFixed(1)}</ele>`;
+      trksegs += `<time>${iso(p.t)}</time></trkpt>\n`;
+    }
+    trksegs += "    </trkseg>\n";
+  }
+  const name = "Intervall-Lauf " + (R.startWall ? R.startWall.toLocaleDateString("de-DE") : "");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Intervall-Lauf-Tracker"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>${esc(name)}</name><time>${iso(R.startWall || Date.now())}</time></metadata>
+${wpts}  <trk>
+    <name>${esc(name)}</name><type>running</type>
+${trksegs}  </trk>
+</gpx>\n`;
+}
+$("btnGpx").onclick = () => {
+  if(!R.points.length){ alert("Keine GPS-Punkte aufgezeichnet – nichts zu exportieren."); return; }
+  const blob = new Blob([buildGpx()], { type:"application/gpx+xml" });
+  const a = document.createElement("a");
+  const d = R.startWall || new Date();
+  const pad = n => String(n).padStart(2,"0");
+  a.download = `intervall-lauf_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.gpx`;
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+$("btnAgain").onclick = () => { renderEditor(); show("screen-setup"); };
+</script>
+</body>
+</html>
