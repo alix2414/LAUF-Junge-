@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Intervall</title>
+<meta name="theme-color" content="#0B0C12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Intervall">
+<style>
+:root{
+  --bg:#0B0C12; --ink:#EDEFF2; --muted:#8A90A0; --dim:#585D68;
+  --glass:rgba(255,255,255,.055); --glass2:rgba(255,255,255,.09); --gbrd:rgba(255,255,255,.13);
+  --orange:#FC5200; --orangeHi:#FF7A38; --mint:#4ADCC8; --danger:#FF4D5E; --slow:#63A8FF;
+  --acc:#FC5200; --accHi:#FF7A38; --accSoft:rgba(252,82,0,.30);
+  --r:22px;
+  font-size:16px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overscroll-behavior:none;}
+body{min-height:100dvh;
+  background:
+    radial-gradient(620px 460px at 12% -4%, rgba(122,92,255,.20), transparent 62%),
+    radial-gradient(560px 420px at 96% 104%, rgba(252,82,0,.16), transparent 60%),
+    radial-gradient(420px 320px at 85% 8%, rgba(74,220,200,.07), transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+button, .toggle, .switch, .stepper{touch-action:manipulation; -webkit-user-select:none; user-select:none;}
+.screen{display:none; max-width:520px; margin:0 auto; padding:14px 16px 40px;}
+.screen.active{display:block;}
+.glass{background:var(--glass); border:1px solid var(--gbrd); border-radius:var(--r);
+  backdrop-filter:blur(20px) saturate(1.3); -webkit-backdrop-filter:blur(20px) saturate(1.3);}
+.topbar{display:flex; justify-content:space-between; align-items:center; font-size:.72rem;
+  color:var(--dim); padding:6px 2px 14px;}
+.topbar .mono{letter-spacing:.06em;}
+.back{background:none; border:none; color:var(--muted); font-size:1rem; padding:8px 12px 8px 0; cursor:pointer; display:flex; align-items:center; gap:4px;}
+h1{font-size:1.25rem; font-weight:600; letter-spacing:.01em; margin:2px 0 4px;}
+.sub{color:var(--muted); font-size:.82rem; margin:0 0 16px; line-height:1.5;}
+/* ---------- Home ---------- */
+#screen-home{display:none;}
+#screen-home.active{display:flex; flex-direction:column; min-height:96dvh;}
+.homebtns{margin:auto; width:100%; display:flex; flex-direction:column; gap:14px; align-items:center;}
+.modebtn{width:min(72%,260px); padding:16px 12px; text-align:center; font-size:.95rem; font-weight:500;
+  color:var(--ink); cursor:pointer; transition:transform .12s, background .15s;}
+.modebtn:active{transform:scale(.96); background:var(--glass2);}
+.modebtn.lauf{background:rgba(252,82,0,.15); border-color:rgba(252,120,50,.5); color:var(--orangeHi);
+  font-style:italic; font-weight:600; box-shadow:0 0 34px rgba(252,82,0,.22), inset 0 0 18px rgba(252,82,0,.10);}
+.wordmark{text-align:center; font-size:.62rem; letter-spacing:.3em; color:var(--dim); padding-bottom:8px;}
+/* ---------- Formulare ---------- */
+.card{padding:15px; margin-bottom:13px;}
+.card h2{font-size:.72rem; text-transform:uppercase; letter-spacing:.16em; color:var(--muted);
+  margin:0 0 12px; font-weight:600; display:flex; align-items:center; gap:8px;}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block; background:var(--acc);
+  box-shadow:0 0 10px var(--accSoft);}
+.row{display:flex; gap:10px; align-items:center;}
+.row + .row{margin-top:10px;}
+label.small{font-size:.7rem; color:var(--muted); display:block; margin-bottom:5px;}
+input[type=text], input[type=number]{
+  width:100%; background:rgba(0,0,0,.28); border:1px solid var(--gbrd); color:var(--ink);
+  border-radius:14px; padding:12px 13px; font-size:1rem; min-height:48px;}
+input:focus{outline:none; border-color:var(--acc); box-shadow:0 0 0 3px var(--accSoft);}
+.toggle{display:flex; background:rgba(0,0,0,.28); border:1px solid var(--gbrd); border-radius:99px; overflow:hidden; flex-shrink:0; padding:3px;}
+.toggle button{background:none; border:none; color:var(--muted); padding:9px 13px; font-size:.82rem; min-height:42px; cursor:pointer; border-radius:99px;}
+.toggle button.on{background:var(--acc); color:#0B0C12; font-weight:600; box-shadow:0 0 14px var(--accSoft);}
+.stepper{display:flex; align-items:center; background:rgba(0,0,0,.28); border:1px solid var(--gbrd); border-radius:99px; overflow:hidden;}
+.stepper button{width:52px; min-height:52px; background:none; border:none; color:var(--ink); font-size:1.45rem; cursor:pointer;}
+.stepper .val{min-width:60px; text-align:center; font-size:1.25rem; font-weight:600;}
+.switchrow{display:flex; justify-content:space-between; align-items:center;}
+.switch{position:relative; width:52px; height:32px; flex-shrink:0;}
+.switch input{opacity:0; width:100%; height:100%; position:absolute; margin:0; cursor:pointer;}
+.switch .tr{position:absolute; inset:0; background:rgba(0,0,0,.3); border:1px solid var(--gbrd); border-radius:16px; transition:.15s; pointer-events:none;}
+.switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:var(--muted); transition:.15s;}
+.switch input:checked + .tr{background:var(--acc); border-color:var(--acc); box-shadow:0 0 14px var(--accSoft);}
+.switch input:checked + .tr::after{transform:translateX(20px); background:#0B0C12;}
+.phase-item{background:rgba(0,0,0,.20); border:1px solid var(--gbrd); border-radius:16px; padding:11px; margin-top:10px;}
+.btn{display:block; width:100%; border:none; border-radius:99px; font-size:1.05rem; font-weight:700;
+  min-height:60px; cursor:pointer; color:#0B0C12; transition:transform .12s;}
+.btn:active{transform:scale(.97);}
+.btn.start{background:var(--acc); box-shadow:0 0 34px var(--accSoft); letter-spacing:.02em; margin-top:6px;}
+.btn.ghost{background:var(--glass); border:1px solid var(--gbrd); color:var(--muted); min-height:48px; font-size:.88rem; font-weight:500; border-radius:16px;}
+.btn.small-danger{background:none; border:none; color:var(--danger); min-height:40px; font-size:.82rem; width:auto; padding:0 6px; font-weight:500;}
+.hint{font-size:.75rem; color:var(--dim); line-height:1.55; margin-top:12px;}
+.err{background:rgba(255,77,94,.12); border:1px solid rgba(255,77,94,.45); color:#FFB3BB; border-radius:16px; padding:10px 13px; font-size:.85rem; margin-bottom:12px; display:none;}
+/* ---------- Run ---------- */
+#screen-run{display:none; text-align:center;}
+#screen-run.active{display:flex; flex-direction:column; min-height:96dvh;}
+.gpspill{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--gbrd); border-radius:99px; padding:5px 11px; background:var(--glass);}
+.gpspill .dot{box-shadow:none;}
+.ring-wrap{position:relative; width:min(72vw,270px); margin:8px auto 2px;}
+.ring-wrap svg{width:100%; height:auto; transform:rotate(-90deg); overflow:visible;}
+.ring-bg{stroke:rgba(255,255,255,.09);}
+.ring-halo{stroke:var(--accSoft); opacity:.55;}
+.ring-fg{stroke:var(--acc); transition:stroke-dashoffset .3s linear, stroke .3s;
+  filter:drop-shadow(0 0 8px var(--accSoft)) drop-shadow(0 0 18px var(--accSoft));}
+.ring-center{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:2px;}
+#phaseName{font-size:.95rem; font-weight:600; letter-spacing:.05em; color:var(--accHi);}
+#phaseCount{font-size:.7rem; color:var(--dim);}
+#phaseRemain{font-size:2.4rem; font-weight:700; line-height:1.05;}
+#phaseRemainUnit{font-size:.68rem; color:var(--dim);}
+.nextphase{font-size:.76rem; color:var(--dim); min-height:1.2em; margin-top:8px;}
+.pacecard{margin:12px 0 10px; padding:12px;}
+.pacecard .lbl{font-size:.66rem; text-transform:uppercase; letter-spacing:.18em; color:var(--dim);}
+#livePace{font-size:3rem; font-weight:800; line-height:1.1; transition:color .3s;}
+#livePace small{font-size:.95rem; font-weight:500; color:var(--dim);}
+#paceZone{font-size:.78rem; min-height:1.2em; font-weight:600; letter-spacing:.04em;}
+.totals{display:flex; gap:8px; margin-bottom:12px;}
+.totals > div{flex:1; padding:10px 6px; font-size:.66rem; color:var(--dim); text-transform:uppercase; letter-spacing:.1em;}
+.totals b{display:block; color:var(--ink); font-size:1.15rem; font-weight:700; margin-top:2px;}
+.runbtns{margin-top:auto; display:flex; gap:10px; padding-bottom:10px;}
+.runbtns .btn{flex:1; min-height:62px;}
+.btn.pause{background:var(--glass2); border:1px solid var(--gbrd); color:var(--ink); box-shadow:none;}
+.btn.stop{background:var(--danger); color:#fff; box-shadow:0 0 26px rgba(255,77,94,.3);}
+/* ---------- Summary ---------- */
+table{width:100%; border-collapse:collapse; font-size:.88rem;}
+th{color:var(--dim); font-weight:500; font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; text-align:left; padding:6px 4px;}
+td{padding:9px 4px; border-top:1px solid rgba(255,255,255,.08);}
+td.num{text-align:right;}
+.sumgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:13px;}
+.sumgrid .card{margin:0; text-align:center; padding:14px 8px;}
+.sumgrid b{font-size:1.4rem; display:block;}
+.sumgrid span{font-size:.66rem; color:var(--dim); text-transform:uppercase; letter-spacing:.12em;}
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<div class="screen active" id="screen-home">
+  <div class="topbar"><span class="mono" id="homeDate"></span><span></span></div>
+  <div class="homebtns">
+    <button class="glass modebtn" data-mode="easy">Lockere Intervall</button>
+    <button class="glass modebtn" data-mode="fast">Schnelle Intervall</button>
+    <button class="glass modebtn lauf" data-mode="lauf">LAUF Junge!</button>
+  </div>
+  <div class="wordmark">INTERVALL</div>
+</div>
+
+<!-- ================= SETUP: LAUF Junge! ================= -->
+<div class="screen" id="screen-lauf">
+  <button class="back" data-back>‹ Zurück</button>
+  <h1 style="font-style:italic">LAUF Junge!</h1>
+  <p class="sub">Langer Lauf. Ziel-Distanz und Pace-Bereich festlegen — die App warnt mit Ton und Vibration, wenn du zu schnell oder zu langsam wirst.</p>
+  <div class="err" id="laufErr"></div>
+  <div class="glass card">
+    <h2><span class="dot"></span>Ziel</h2>
+    <label class="small">Ziel-Distanz (Kilometer)</label>
+    <input type="number" id="laufKm" inputmode="decimal" min="1" step="0.5">
+    <div class="row" style="margin-top:12px">
+      <div style="flex:1">
+        <label class="small">Max-Pace — schnellste (min/km)</label>
+        <input type="text" id="laufMax" inputmode="numeric" placeholder="5:30" class="mono">
+      </div>
+      <div style="flex:1">
+        <label class="small">Min-Pace — langsamste (min/km)</label>
+        <input type="text" id="laufMin" inputmode="numeric" placeholder="6:15" class="mono">
+      </div>
+    </div>
+  </div>
+  <button class="btn start" data-start="lauf">Los geht's</button>
+  <p class="hint">Kein Warm-up, kein Cool-down — einfach loslaufen. Der Lauf endet automatisch, wenn die Ziel-Distanz erreicht ist.</p>
+</div>
+
+<!-- ================= SETUP: Intervalle (fast & easy) ================= -->
+<div class="screen" id="screen-int">
+  <button class="back" data-back>‹ Zurück</button>
+  <h1 id="intTitle"></h1>
+  <p class="sub" id="intSub"></p>
+  <div class="err" id="intErr"></div>
+
+  <div class="glass card">
+    <div class="switchrow">
+      <h2 style="margin:0"><span class="dot"></span>Warm-up</h2>
+      <span class="switch"><input type="checkbox" id="wuOn"><span class="tr"></span></span>
+    </div>
+    <div id="wuBody" style="margin-top:10px"></div>
+  </div>
+
+  <div class="glass card">
+    <h2><span class="dot"></span>Intervalle</h2>
+    <label class="small">Wiederholungen</label>
+    <div class="stepper">
+      <button type="button" id="repMinus">−</button>
+      <div class="val mono" id="repVal">5</div>
+      <button type="button" id="repPlus">+</button>
+    </div>
+    <div id="phaseList"></div>
+    <button type="button" class="btn ghost" id="addPhase" style="margin-top:10px">+ Phase hinzufügen</button>
+  </div>
+
+  <div class="glass card">
+    <div class="switchrow">
+      <h2 style="margin:0"><span class="dot"></span>Cool-down</h2>
+      <span class="switch"><input type="checkbox" id="cdOn"><span class="tr"></span></span>
+    </div>
+    <div id="cdBody" style="margin-top:10px"></div>
+  </div>
+
+  <button class="btn start" data-start="int">Los geht's</button>
+  <p class="hint">Phasenwechsel werden mit Ton und Vibration signalisiert. Änderungen werden automatisch gespeichert.</p>
+</div>
+
+<!-- ================= RUN ================= -->
+<div class="screen" id="screen-run">
+  <div class="topbar">
+    <span class="gpspill"><span class="dot" id="gpsDot" style="background:var(--dim)"></span><span id="gpsTxt">GPS…</span></span>
+    <span class="mono" id="clock">00:00</span>
+  </div>
+  <div class="ring-wrap">
+    <svg viewBox="0 0 200 200">
+      <circle class="ring-halo" cx="100" cy="100" r="88" fill="none" stroke-width="20"/>
+      <circle class="ring-bg" cx="100" cy="100" r="88" fill="none" stroke-width="7"/>
+      <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="88" fill="none" stroke-width="7"
+        stroke-linecap="round" stroke-dasharray="552.9" stroke-dashoffset="0"/>
+    </svg>
+    <div class="ring-center">
+      <div id="phaseCount">–</div>
+      <div id="phaseName">Bereit</div>
+      <div class="mono" id="phaseRemain">–</div>
+      <div id="phaseRemainUnit"></div>
+    </div>
+  </div>
+  <div class="nextphase" id="nextPhase"></div>
+  <div class="glass pacecard">
+    <div class="lbl">Momentan-Pace</div>
+    <div class="mono" id="livePace">–:–– <small>/km</small></div>
+    <div id="paceZone"></div>
+  </div>
+  <div class="totals">
+    <div class="glass">KM<b class="mono" id="totDist">0,00</b></div>
+    <div class="glass">Zeit<b class="mono" id="totTime">00:00</b></div>
+    <div class="glass">Hm ↑<b class="mono" id="totEle">0</b></div>
+  </div>
+  <div class="runbtns">
+    <button class="btn pause" id="btnPause">Pause</button>
+    <button class="btn stop" id="btnStop">Beenden</button>
+  </div>
+</div>
+
+<!-- ================= SUMMARY ================= -->
+<div class="screen" id="screen-summary">
+  <h1>Zusammenfassung</h1>
+  <p class="sub" id="sumDate"></p>
+  <div class="sumgrid">
+    <div class="glass card"><b class="mono" id="sDist">–</b><span>Distanz</span></div>
+    <div class="glass card"><b class="mono" id="sTime">–</b><span>Zeit</span></div>
+    <div class="glass card"><b class="mono" id="sPace">–</b><span>Ø Pace</span></div>
+    <div class="glass card"><b class="mono" id="sEle">–</b><span>Höhenmeter</span></div>
+  </div>
+  <div class="glass card">
+    <h2>Pace pro Phasentyp</h2>
+    <table id="tblGroups"><thead><tr><th>Phase</th><th class="num">Anzahl</th><th class="num">Distanz</th><th class="num">Ø Pace</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="glass card">
+    <h2>Alle Abschnitte</h2>
+    <table id="tblLaps"><thead><tr><th>#</th><th>Phase</th><th class="num">Zeit</th><th class="num">Distanz</th><th class="num">Pace</th></tr></thead><tbody></tbody></table>
+  </div>
+  <button class="btn start" id="btnGpx">GPX herunterladen</button>
+  <button class="btn ghost" id="btnAgain" style="margin-top:12px">Neuer Lauf</button>
+  <p class="hint">Die GPX-Datei enthält alle GPS-Rohpunkte plus Wegpunkte an jedem Phasenwechsel und lässt sich direkt in Strava hochladen (Upload → Datei).</p>
+</div>
+
+<script>
+"use strict";
+/* ================= Konfiguration ================= */
+const LS_KEY = "intervallLaufConfig.v3";
+const $ = id => document.getElementById(id);
+const MODE_META = {
+  lauf: { title:"LAUF Junge!", acc:"#FC5200", accHi:"#FF7A38", accSoft:"rgba(252,82,0,.30)" },
+  fast: { title:"Schnelle Intervall", acc:"#FC5200", accHi:"#FF7A38", accSoft:"rgba(252,82,0,.30)",
+          sub:"Warm-up, schnelle Abschnitte mit Gehpausen, Ausjoggen." },
+  easy: { title:"Lockere Intervall", acc:"#4ADCC8", accHi:"#7BEBDB", accSoft:"rgba(74,220,200,.28)",
+          sub:"Lockeres Laufen im Wechsel mit Gehpausen. Warm-up und Cool-down sind aus, lassen sich aber zuschalten." },
+};
+
+const defaultStore = () => ({ v:3,
+  lauf: { km:10, paceMax:330, paceMin:375 },
+  fast: {
+    warmup:   { on:true, name:"Warmlaufen", mode:"time", time:600, dist:1000 },
+    cooldown: { on:true, name:"Ausjoggen",  mode:"time", time:600, dist:1000 },
+    reps: 5,
+    phases: [
+      { name:"Schnell",  mode:"time", time:180, dist:600, kind:"work" },
+      { name:"Gehpause", mode:"time", time:120, dist:150, kind:"rest" },
+    ],
+  },
+  easy: {
+    warmup:   { on:false, name:"Warmlaufen", mode:"time", time:300, dist:500 },
+    cooldown: { on:false, name:"Ausjoggen",  mode:"time", time:300, dist:500 },
+    reps: 8,
+    phases: [
+      { name:"Locker", mode:"time", time:240, dist:800, kind:"work" },
+      { name:"Gehen",  mode:"time", time:60,  dist:100, kind:"rest" },
+    ],
+  },
+});
+
+let store = loadStore();
+let currentMode = "fast";
+let cfg = store.fast;
+function loadStore(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(s && s.v===3 && s.lauf && s.fast && s.easy) return s;
+    }
+  }catch(e){}
+  return defaultStore();
+}
+function saveCfg(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(store)); }catch(e){} }
+
+/* Pace mm:ss <-> Sekunden */
+function parsePace(str){
+  const s = String(str).trim().replace(",", ":").replace(".", ":");
+  let m;
+  if((m = s.match(/^(\d{1,2}):(\d{1,2})$/)))  return (+m[1])*60 + (+m[2]);
+  if((m = s.match(/^(\d)(\d{2})$/)))          return (+m[1])*60 + (+m[2]);
+  if((m = s.match(/^(\d{1,2})$/)))            return (+m[1])*60;
+  return null;
+}
+const paceStr = sec => `${Math.floor(sec/60)}:${String(Math.round(sec%60)).padStart(2,"0")}`;
+
+/* Pace-Zone für LAUF Junge!: paceMax = schnellste (kleinere Zahl), paceMin = langsamste */
+function paceZone(paceSec, l){
+  if(paceSec == null || !isFinite(paceSec)) return "none";
+  const fast = Math.min(l.paceMax, l.paceMin), slow = Math.max(l.paceMax, l.paceMin);
+  if(paceSec < fast) return "fast";
+  if(paceSec > slow) return "slow";
+  return "ok";
+}
+
+/* ================= Theming & Navigation ================= */
+function applyAccent(mode){
+  const m = MODE_META[mode], r = document.documentElement.style;
+  r.setProperty("--acc", m.acc); r.setProperty("--accHi", m.accHi); r.setProperty("--accSoft", m.accSoft);
+}
+function show(id){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+function openSetup(mode){
+  currentMode = mode;
+  applyAccent(mode);
+  if(mode === "lauf"){ renderLauf(); show("screen-lauf"); }
+  else { cfg = store[mode]; renderEditor(); show("screen-int"); }
+}
+document.querySelectorAll(".modebtn").forEach(b => b.onclick = () => openSetup(b.dataset.mode));
+document.querySelectorAll("[data-back]").forEach(b => b.onclick = () => show("screen-home"));
+{
+  const d = new Date(), tage = ["SO","MO","DI","MI","DO","FR","SA"];
+  $("homeDate").textContent = `${tage[d.getDay()]} ${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.`;
+}
+
+/* ================= Editor: LAUF Junge! ================= */
+function renderLauf(){
+  const l = store.lauf;
+  $("laufKm").value = l.km;
+  $("laufMax").value = paceStr(l.paceMax);
+  $("laufMin").value = paceStr(l.paceMin);
+  $("laufKm").oninput = () => {
+    const v = parseFloat(String($("laufKm").value).replace(",", "."));
+    if(isFinite(v) && v > 0){ l.km = v; saveCfg(); }
+  };
+  for(const [id, key] of [["laufMax","paceMax"],["laufMin","paceMin"]]){
+    $(id).onchange = () => {
+      const v = parsePace($(id).value);
+      if(v != null && v >= 120 && v <= 1200){ l[key] = v; saveCfg(); }
+      $(id).value = paceStr(l[key]);
+    };
+  }
+}
+
+/* ================= Editor: Intervalle ================= */
+function phaseFields(p, {showName=true, showKind=false, onRemove=null} = {}){
+  const wrap = document.createElement("div");
+  wrap.className = "phase-item";
+  const r1 = document.createElement("div"); r1.className = "row";
+  if(showName){
+    const nameWrap = document.createElement("div"); nameWrap.style.flex = "1";
+    nameWrap.innerHTML = `<label class="small">Name</label>`;
+    const inp = document.createElement("input");
+    inp.type = "text"; inp.value = p.name; inp.maxLength = 24;
+    inp.addEventListener("input", () => { p.name = inp.value; saveCfg(); });
+    nameWrap.appendChild(inp); r1.appendChild(nameWrap);
+  }
+  if(showKind){
+    const kindWrap = document.createElement("div");
+    kindWrap.innerHTML = `<label class="small">Typ</label>`;
+    const tg = document.createElement("div"); tg.className = "toggle";
+    const bW = document.createElement("button"); bW.type="button"; bW.textContent = "Belastung";
+    const bR = document.createElement("button"); bR.type="button"; bR.textContent = "Erholung";
+    const paint = () => { bW.classList.toggle("on", p.kind==="work"); bR.classList.toggle("on", p.kind!=="work"); };
+    bW.onclick = () => { p.kind="work"; paint(); saveCfg(); };
+    bR.onclick = () => { p.kind="rest"; paint(); saveCfg(); };
+    paint(); tg.append(bW,bR); kindWrap.appendChild(tg); r1.appendChild(kindWrap);
+  }
+  wrap.appendChild(r1);
+  const r2 = document.createElement("div"); r2.className = "row";
+  const modeWrap = document.createElement("div");
+  modeWrap.innerHTML = `<label class="small">Modus</label>`;
+  const tg = document.createElement("div"); tg.className = "toggle";
+  const bT = document.createElement("button"); bT.type="button"; bT.textContent = "Zeit";
+  const bD = document.createElement("button"); bD.type="button"; bD.textContent = "Distanz";
+  modeWrap.appendChild(tg); tg.append(bT,bD);
+  const valWrap = document.createElement("div"); valWrap.style.flex = "1";
+  const valLbl = document.createElement("label"); valLbl.className = "small";
+  const valInp = document.createElement("input");
+  valInp.type = "number"; valInp.inputMode = "decimal"; valInp.min = "0"; valInp.step = "any";
+  valWrap.append(valLbl, valInp);
+  function paintMode(){
+    bT.classList.toggle("on", p.mode==="time"); bD.classList.toggle("on", p.mode==="dist");
+    if(p.mode==="time"){ valLbl.textContent = "Dauer (Minuten)"; valInp.value = +(p.time/60).toFixed(2).replace(/\.?0+$/,""); }
+    else { valLbl.textContent = "Distanz (Meter)"; valInp.value = p.dist; }
+  }
+  bT.onclick = () => { p.mode="time"; paintMode(); saveCfg(); };
+  bD.onclick = () => { p.mode="dist"; paintMode(); saveCfg(); };
+  valInp.addEventListener("input", () => {
+    const v = parseFloat(String(valInp.value).replace(",", "."));
+    if(!isFinite(v) || v <= 0) return;
+    if(p.mode==="time") p.time = Math.round(v*60); else p.dist = Math.round(v);
+    saveCfg();
+  });
+  paintMode();
+  r2.append(modeWrap, valWrap);
+  wrap.appendChild(r2);
+  if(onRemove){
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "btn small-danger"; del.textContent = "Phase entfernen";
+    del.onclick = onRemove;
+    wrap.appendChild(del);
+  }
+  return wrap;
+}
+
+function renderEditor(){
+  const meta = MODE_META[currentMode];
+  $("intTitle").textContent = meta.title;
+  $("intSub").textContent = meta.sub || "";
+  for(const [key, bodyId, onId] of [["warmup","wuBody","wuOn"],["cooldown","cdBody","cdOn"]]){
+    const p = cfg[key], body = $(bodyId), chk = $(onId);
+    chk.checked = p.on !== false;
+    body.innerHTML = "";
+    body.appendChild(phaseFields(p, {showName:true}));
+    body.style.display = chk.checked ? "" : "none";
+    chk.onchange = () => { p.on = chk.checked; body.style.display = chk.checked ? "" : "none"; saveCfg(); };
+  }
+  $("repVal").textContent = cfg.reps;
+  $("repMinus").onclick = () => { cfg.reps = Math.max(1, cfg.reps-1); $("repVal").textContent = cfg.reps; saveCfg(); };
+  $("repPlus").onclick  = () => { cfg.reps = Math.min(50, cfg.reps+1); $("repVal").textContent = cfg.reps; saveCfg(); };
+  const list = $("phaseList"); list.innerHTML = "";
+  cfg.phases.forEach((p, i) => {
+    list.appendChild(phaseFields(p, {
+      showName:true, showKind:true,
+      onRemove: cfg.phases.length > 1 ? () => { cfg.phases.splice(i,1); saveCfg(); renderEditor(); } : null
+    }));
+  });
+  $("addPhase").onclick = () => {
+    cfg.phases.push({ name:"Phase "+(cfg.phases.length+1), mode:"time", time:60, dist:200,
+      kind: cfg.phases.length % 2 ? "work" : "rest" });
+    saveCfg(); renderEditor();
+  };
+}
+
+/* Flache Phasen-Warteschlange */
+function buildQueue(mode){
+  if(mode === "lauf"){
+    return [{ name:"LAUF Junge!", kind:"work", mode:"dist",
+              target: Math.round(store.lauf.km*1000), rep:null, repTotal:null }];
+  }
+  const c = store[mode], q = [];
+  const push = (p, kind, rep=null, repTotal=null) => q.push({
+    name: p.name || "Phase", kind, mode: p.mode,
+    target: p.mode==="time" ? p.time : p.dist, rep, repTotal,
+  });
+  if(c.warmup.on) push(c.warmup, "frame");
+  for(let r=1; r<=c.reps; r++)
+    for(const p of c.phases) push(p, p.kind==="work" ? "work" : "rest", r, c.reps);
+  if(c.cooldown.on) push(c.cooldown, "frame");
+  return q;
+}
+
+/* ================= Lauf-Engine ================= */
+const R = {
+  active:false, paused:false, mode:"fast", queue:[], idx:0,
+  phaseTime:0, phaseDist:0, total:0, totalDist:0, eleGain:0,
+  points:[], segStart:[], laps:[], startWall:null,
+  lastTick:null, lastFix:null, smoothEle:null, eleRef:null,
+  buf:[], watchId:null, wakeLock:null, timer:null,
+  zone:"none", zoneSince:0, lastZoneAlert:0,
+};
+const CIRC = 2*Math.PI*88;
+
+/* --- Audio & Vibration --- */
+let AC = null;
+function beep(freq, dur=0.18, when=0, vol=0.5){
+  if(!AC) return;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = "sine"; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, AC.currentTime+when);
+  g.gain.exponentialRampToValueAtTime(vol, AC.currentTime+when+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+when+dur);
+  o.connect(g); g.connect(AC.destination);
+  o.start(AC.currentTime+when); o.stop(AC.currentTime+when+dur+0.05);
+}
+function signal(kind){
+  const vib = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+  if(kind==="work"){ beep(880,.15,0); beep(880,.15,.22); beep(1175,.25,.44); vib([200,80,200,80,400]); }
+  else if(kind==="rest"){ beep(523,.35,0); vib([500]); }
+  else if(kind==="frame"){ beep(660,.2,0); beep(660,.2,.3); vib([200,100,200]); }
+  else if(kind==="fastAlert"){ beep(1245,.11,0); beep(1245,.11,.16); beep(1245,.11,.32); vib([90,60,90,60,90]); }
+  else if(kind==="slowAlert"){ beep(392,.4,0); beep(392,.4,.5); vib([450,150,450]); }
+  else if(kind==="done"){ [880,988,1175,1319].forEach((f,i)=>beep(f,.22,i*.2)); vib([300,100,300,100,600]); }
+}
+
+/* --- Hilfsfunktionen --- */
+const toRad = d => d*Math.PI/180;
+function haversine(a,b){
+  const dLat = toRad(b.lat-a.lat), dLon = toRad(b.lon-a.lon);
+  const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLon/2)**2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+const fmtT = s => { s=Math.max(0,Math.round(s));
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60, p=n=>String(n).padStart(2,"0");
+  return h ? `${h}:${p(m)}:${p(ss)}` : `${p(m)}:${p(ss)}`; };
+const fmtPace = secPerKm => {
+  if(!isFinite(secPerKm) || secPerKm<=0 || secPerKm>3600) return "–:––";
+  const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
+  return s===60 ? `${m+1}:00` : `${m}:${String(s).padStart(2,"0")}`; };
+const fmtKm = m => (m/1000).toFixed(2).replace(".", ",");
+
+/* --- GPS --- */
+function onFix(pos){
+  const c = pos.coords, t = pos.timestamp;
+  const acc = c.accuracy ?? 999;
+  setGps(acc);
+  if(!R.active || R.paused){ R.lastFix = null; return; }
+  if(acc > 35) return;
+  const p = { t, lat:c.latitude, lon:c.longitude,
+              ele:(c.altitude!=null && isFinite(c.altitude)) ? c.altitude : null };
+  if(R.lastFix){
+    const dt = (t - R.lastFix.t)/1000;
+    if(dt <= 0) return;
+    const d = haversine(R.lastFix, p);
+    if(d/dt > 12) return;
+    R.totalDist += d; R.phaseDist += d;
+    if(p.ele != null){
+      R.smoothEle = R.smoothEle==null ? p.ele : R.smoothEle*0.8 + p.ele*0.2;
+      if(R.eleRef==null) R.eleRef = R.smoothEle;
+      const diff = R.smoothEle - R.eleRef;
+      if(diff >= 1.5){ R.eleGain += diff; R.eleRef = R.smoothEle; }
+      else if(diff <= -1.5){ R.eleRef = R.smoothEle; }
+    }
+  }
+  R.lastFix = p;
+  R.points.push({ ...p, phase: R.queue[R.idx] ? R.queue[R.idx].name : "Ende", seg: R.segStart.length-1 });
+  R.buf.push({ t, d: R.totalDist });
+  while(R.buf.length > 2 && t - R.buf[0].t > 10000) R.buf.shift();
+}
+function setGps(acc){
+  const dot = $("gpsDot"), txt = $("gpsTxt");
+  if(acc==null){ dot.style.background="var(--danger)"; txt.textContent="kein GPS"; return; }
+  if(acc<=12){ dot.style.background="var(--mint)"; txt.textContent=`GPS ±${Math.round(acc)} m`; }
+  else if(acc<=35){ dot.style.background="var(--orange)"; txt.textContent=`GPS ±${Math.round(acc)} m`; }
+  else { dot.style.background="var(--danger)"; txt.textContent=`GPS schwach ±${Math.round(acc)} m`; }
+}
+
+/* --- Momentan-Pace (gleitendes Fenster) --- */
+function currentPace(){
+  if(R.buf.length < 2) return null;
+  const a = R.buf[0], b = R.buf[R.buf.length-1];
+  const dt = (b.t - a.t)/1000, dd = b.d - a.d;
+  if(dt < 3 || dd <= 1) return null;
+  const v = dd/dt;
+  return v >= 0.6 ? 1000/v : null;
+}
+
+/* --- Wake Lock --- */
+async function keepAwake(){
+  try{ R.wakeLock = await navigator.wakeLock.request("screen"); }catch(e){}
+}
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState==="visible" && R.active) keepAwake();
+});
+
+/* --- Start / Pause / Stop --- */
+function startRun(mode){
+  const errBox = mode==="lauf" ? $("laufErr") : $("intErr");
+  errBox.style.display = "none";
+  const q = buildQueue(mode);
+  if(!q.length){ errBox.textContent = "Keine Phasen konfiguriert."; errBox.style.display="block"; return; }
+  if(!("geolocation" in navigator)){ errBox.textContent = "Dieses Gerät stellt keine Geolocation bereit."; errBox.style.display="block"; return; }
+  AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+  if(AC.state === "suspended") AC.resume();
+  Object.assign(R, { active:true, paused:false, mode, queue:q, idx:0, phaseTime:0, phaseDist:0,
+    total:0, totalDist:0, eleGain:0, points:[], segStart:[Date.now()], laps:[],
+    startWall:new Date(), lastTick:performance.now(), lastFix:null, smoothEle:null, eleRef:null,
+    buf:[], zone:"none", zoneSince:0, lastZoneAlert:0 });
+  $("btnPause").textContent = "Pause";
+  R.watchId = navigator.geolocation.watchPosition(onFix,
+    err => { setGps(null); if(err.code===1) $("nextPhase").textContent = "GPS-Berechtigung verweigert – Distanz kann nicht gemessen werden."; },
+    { enableHighAccuracy:true, maximumAge:0, timeout:15000 });
+  keepAwake();
+  show("screen-run");
+  signal(q[0].kind);
+  R.timer = setInterval(tick, 250);
+  paintPhase();
+}
+document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startRun(currentMode));
+
+$("btnPause").onclick = () => {
+  if(!R.active) return;
+  R.paused = !R.paused;
+  $("btnPause").textContent = R.paused ? "Weiter" : "Pause";
+  if(!R.paused){ R.lastTick = performance.now(); R.lastFix = null; R.buf = []; R.segStart.push(Date.now()); }
+};
+$("btnStop").onclick = () => {
+  if(!R.active) return;
+  if(!confirm("Lauf beenden?")) return;
+  finishRun(false);
+};
+
+function tick(){
+  const now = performance.now();
+  if(!R.paused){
+    const dt = (now - R.lastTick)/1000;
+    R.total += dt; R.phaseTime += dt;
+    const ph = R.queue[R.idx];
+    if(ph){
+      const done = ph.mode==="time" ? R.phaseTime >= ph.target : R.phaseDist >= ph.target;
+      if(done){ nextPhase(); R.lastTick = now; paintLive(); return; }
+    }
+    if(R.mode === "lauf") checkZone(now);
+  }
+  R.lastTick = now;
+  paintLive();
+}
+function checkZone(now){
+  const z = paceZone(currentPace(), store.lauf);
+  if(z !== R.zone){ R.zone = z; R.zoneSince = now; return; }
+  if((z==="fast" || z==="slow") && now - R.zoneSince > 5000 &&
+     (R.lastZoneAlert===0 || now - R.lastZoneAlert > 15000)){
+    signal(z==="fast" ? "fastAlert" : "slowAlert");
+    R.lastZoneAlert = now;
+  }
+}
+function nextPhase(){
+  const ph = R.queue[R.idx];
+  R.laps.push({ name:ph.name, kind:ph.kind, rep:ph.rep, time:R.phaseTime, dist:R.phaseDist });
+  R.idx++; R.phaseTime = 0; R.phaseDist = 0;
+  if(R.idx >= R.queue.length){ finishRun(true); return; }
+  signal(R.queue[R.idx].kind);
+  paintPhase();
+}
+function finishRun(complete){
+  const ph = R.queue[R.idx];
+  if(!complete && ph && (R.phaseTime > 2 || R.phaseDist > 5))
+    R.laps.push({ name:ph.name, kind:ph.kind, rep:ph.rep, time:R.phaseTime, dist:R.phaseDist });
+  R.active = false;
+  clearInterval(R.timer);
+  if(R.watchId != null) navigator.geolocation.clearWatch(R.watchId);
+  if(R.wakeLock){ try{ R.wakeLock.release(); }catch(e){} R.wakeLock = null; }
+  signal("done");
+  renderSummary();
+  show("screen-summary");
+}
+
+/* --- Live-Anzeige --- */
+function paintPhase(){
+  const ph = R.queue[R.idx];
+  $("phaseName").textContent = ph.name;
+  $("phaseCount").textContent = ph.rep ? `Runde ${ph.rep} / ${ph.repTotal}` : "";
+  if(R.mode === "lauf"){
+    $("phaseRemainUnit").textContent = "km verbleibend";
+    $("nextPhase").textContent = `Ziel-Pace ${paceStr(Math.min(store.lauf.paceMax,store.lauf.paceMin))}–${paceStr(Math.max(store.lauf.paceMax,store.lauf.paceMin))} /km`;
+  } else {
+    $("phaseRemainUnit").textContent = ph.mode==="time" ? "verbleibend" : "Meter verbleibend";
+    const nxt = R.queue[R.idx+1];
+    $("nextPhase").textContent = nxt ? `Danach: ${nxt.name}` : "Letzte Phase";
+  }
+}
+const ZONE_UI = {
+  ok:   { txt:"im Bereich",  col:"var(--mint)" },
+  fast: { txt:"zu schnell",  col:"var(--danger)" },
+  slow: { txt:"zu langsam",  col:"var(--slow)" },
+  none: { txt:"",            col:"var(--ink)" },
+};
+function paintLive(){
+  const ph = R.queue[R.idx];
+  if(ph){
+    const frac = ph.mode==="time" ? R.phaseTime/ph.target : Math.min(1, R.phaseDist/ph.target);
+    $("ringFg").style.strokeDashoffset = CIRC * (1 - Math.min(1, frac));
+    $("phaseRemain").textContent = R.mode==="lauf"
+      ? fmtKm(Math.max(0, ph.target - R.phaseDist))
+      : ph.mode==="time" ? fmtT(ph.target - R.phaseTime)
+      : String(Math.max(0, Math.round(ph.target - R.phaseDist)));
+  }
+  const pace = currentPace();
+  $("livePace").innerHTML = `${pace ? fmtPace(pace) : "–:––"} <small>/km</small>`;
+  if(R.mode === "lauf"){
+    const ui = ZONE_UI[pace ? R.zone : "none"];
+    $("livePace").style.color = pace && R.zone!=="ok" && R.zone!=="none" ? ui.col : "var(--ink)";
+    $("paceZone").textContent = pace ? ui.txt : "";
+    $("paceZone").style.color = ui.col;
+  } else {
+    $("livePace").style.color = "var(--ink)";
+    $("paceZone").textContent = "";
+  }
+  $("totDist").textContent = fmtKm(R.totalDist);
+  $("totTime").textContent = fmtT(R.total);
+  $("totEle").textContent = Math.round(R.eleGain);
+  const d = new Date(); $("clock").textContent = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+
+/* ================= Zusammenfassung & GPX ================= */
+function renderSummary(){
+  $("sumDate").textContent = R.startWall
+    ? MODE_META[R.mode].title + " · " + R.startWall.toLocaleString("de-DE", { dateStyle:"full", timeStyle:"short" }) + " Uhr" : "";
+  $("sDist").textContent = fmtKm(R.totalDist) + " km";
+  $("sTime").textContent = fmtT(R.total);
+  $("sPace").textContent = R.totalDist > 20 ? fmtPace(R.total/(R.totalDist/1000)) + " /km" : "–";
+  $("sEle").textContent = Math.round(R.eleGain) + " m";
+  const groups = new Map();
+  for(const l of R.laps){
+    const g = groups.get(l.name) || { n:0, time:0, dist:0, kind:l.kind };
+    g.n++; g.time += l.time; g.dist += l.dist; groups.set(l.name, g);
+  }
+  const gb = $("tblGroups").querySelector("tbody"); gb.innerHTML = "";
+  for(const [name, g] of groups){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${esc(name)}</td>
+      <td class="num mono">${g.n}×</td>
+      <td class="num mono">${fmtKm(g.dist)} km</td>
+      <td class="num mono">${g.dist>20 ? fmtPace(g.time/(g.dist/1000)) : "–"}</td>`;
+    gb.appendChild(tr);
+  }
+  const lb = $("tblLaps").querySelector("tbody"); lb.innerHTML = "";
+  R.laps.forEach((l,i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="mono">${i+1}</td>
+      <td>${esc(l.name)}${l.rep ? ` <span style="color:var(--dim)">(${l.rep})</span>` : ""}</td>
+      <td class="num mono">${fmtT(l.time)}</td>
+      <td class="num mono">${fmtKm(l.dist)} km</td>
+      <td class="num mono">${l.dist>20 ? fmtPace(l.time/(l.dist/1000)) : "–"}</td>`;
+    lb.appendChild(tr);
+  });
+}
+const esc = s => String(s).replace(/[<>&"']/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]));
+
+function buildGpx(){
+  const iso = t => new Date(t).toISOString();
+  let wpts = "", trksegs = "";
+  let lastPhase = null;
+  for(const p of R.points){
+    if(p.phase !== lastPhase){
+      wpts += `  <wpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">
+    <time>${iso(p.t)}</time><name>${esc(p.phase)}</name>
+  </wpt>\n`;
+      lastPhase = p.phase;
+    }
+  }
+  const bySeg = new Map();
+  for(const p of R.points){
+    if(!bySeg.has(p.seg)) bySeg.set(p.seg, []);
+    bySeg.get(p.seg).push(p);
+  }
+  for(const pts of bySeg.values()){
+    if(!pts.length) continue;
+    trksegs += "    <trkseg>\n";
+    for(const p of pts){
+      trksegs += `      <trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">`;
+      if(p.ele != null) trksegs += `<ele>${p.ele.toFixed(1)}</ele>`;
+      trksegs += `<time>${iso(p.t)}</time></trkpt>\n`;
+    }
+    trksegs += "    </trkseg>\n";
+  }
+  const name = MODE_META[R.mode].title + " " + (R.startWall ? R.startWall.toLocaleDateString("de-DE") : "");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Intervall-Lauf-Tracker"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>${esc(name)}</name><time>${iso(R.startWall || Date.now())}</time></metadata>
+${wpts}  <trk>
+    <name>${esc(name)}</name><type>running</type>
+${trksegs}  </trk>
+</gpx>\n`;
+}
+$("btnGpx").onclick = () => {
+  if(!R.points.length){ alert("Keine GPS-Punkte aufgezeichnet – nichts zu exportieren."); return; }
+  const blob = new Blob([buildGpx()], { type:"application/gpx+xml" });
+  const a = document.createElement("a");
+  const d = R.startWall || new Date();
+  const pad = n => String(n).padStart(2,"0");
+  a.download = `lauf_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.gpx`;
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+$("btnAgain").onclick = () => show("screen-home");
+</script>
+</body>
+</html>
